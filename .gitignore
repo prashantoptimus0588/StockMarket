@@ -1,0 +1,121 @@
+
+# =========================
+# Secrets and environment
+# =========================
+.env
+.env.*
+!.env.example
+!.env.sample
+*.pem
+*.key
+secrets/
+credentials/
+
+# =========================
+# Python
+# =========================
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+dist/
+wheels/
+*.egg-info/
+.eggs/
+pip-wheel-metadata/
+
+# Virtual environments
+.venv/
+venv/
+env/
+ENV/
+
+# Python tooling caches
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.pyright/
+.coverage
+.coverage.*
+htmlcov/
+.tox/
+.nox/
+
+# Jupyter
+.ipynb_checkpoints/
+
+# Keep uv.lock committed for reproducible installs
+
+# =========================
+# IDEs and editors
+# =========================
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# =========================
+# Operating system
+# =========================
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# =========================
+# Logs and runtime files
+# =========================
+*.log
+logs/
+run_logs/
+*.pid
+
+# =========================
+# Generated reports
+# =========================
+reports/markdown/
+reports/json/
+reports/run_logs/
+
+# =========================
+# Local databases and data
+# =========================
+*.sqlite
+*.sqlite3
+*.db
+*.dump
+*.sql.gz
+data/
+chroma_db/
+vector_store/
+
+# =========================
+# Test artifacts
+# =========================
+coverage.xml
+nosetests.xml
+pytestdebug.log
+
+# =========================
+# Frontend, if present
+# =========================
+node_modules/
+dist/
+.vite/
+npm-debug.log*
+yarn-debug.log*
+pnpm-debug.log*
+
+# =========================
+# Docker local overrides
+# =========================
+docker-compose.override.yml
+
+# =========================
+# Test Files
+# =========================
+check_network.py
+model_trial.py
+mcp_probe.py
