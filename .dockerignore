@@ -1,0 +1,13 @@
+.venv
+__pycache__
+*.pyc
+.git
+.env
+_dirheck.txt
+reports
+test
+test_mcp.py
+mcp_probe.py
+model_trial.py
+check_network.py
+check_setup.py
