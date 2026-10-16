@@ -80,6 +80,7 @@ After approval, you can ask follow-up questions about the saved assessment.
 The following diagram describes the high-level flow of the assessment graph.
 
 ```mermaid
+%%{init: {"flowchart": {"curve": "linear"}}}%%
 flowchart TD
     S0(["Start"]) --> B["brain_node"]
 
