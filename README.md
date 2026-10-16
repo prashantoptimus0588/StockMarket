@@ -1,20 +1,18 @@
-
 # StockMarket (StockSense)
-
 
 An agentic investment assessment assistant for Indian and international stocks. Describe a company or compare multiple stocks, choose a risk profile and holding horizon, and StockSense gathers market data, evaluates risk fit and return potential using deterministic analysis engines, and generates a report for human approval.
 
 After approval, you can ask follow-up questions about the saved assessment.
 
+> **Disclaimer:** StockSense is a research and educational analysis tool, not financial advice. Market data and news may be delayed, incomplete, or unavailable. Investment signals are analytical outputs, not guarantees of future performance.
+
 <p align="center">
   <img
-    src="https://raw.githubusercontent.com/prashantoptimus0588/StockMarket/refs/heads/main/overview.png"
+    src="https://raw.githubusercontent.com/prashantoptimus0588/StockMarket/main/overview.png"
     alt="StockSense LangGraph Workflow and AssessmentState"
     width="100%"
   />
 </p>
-
-> **Disclaimer:** StockSense is a research and educational analysis tool, not financial advice. Market data and news may be delayed, incomplete, or unavailable. Investment signals are analytical outputs, not guarantees of future performance.
 
 ---
 
@@ -22,7 +20,7 @@ After approval, you can ask follow-up questions about the saved assessment.
 
 - [Features](#features)
 - [LangGraph Workflow](#langgraph-workflow)
-- [Shared State — AssessmentState](#shared-state--assessmentstate)
+- [Shared State: AssessmentState](#shared-state-assessmentstate)
 - [Architecture](#architecture)
 - [Technology Stack](#technology-stack)
 - [Prerequisites](#prerequisites)
@@ -35,6 +33,7 @@ After approval, you can ask follow-up questions about the saved assessment.
 - [Testing](#testing)
 - [Reports and Persistence](#reports-and-persistence)
 - [Limitations](#limitations)
+- [Author](#author)
 
 ---
 
@@ -78,71 +77,84 @@ After approval, you can ask follow-up questions about the saved assessment.
 
 ## LangGraph Workflow
 
-The following diagram describes the intended high-level flow of the assessment graph.
+The following diagram describes the high-level flow of the assessment graph.
 
 ```mermaid
 flowchart TD
-    START([START]) --> B[brain_node]
+    S0(["Start"]) --> B["brain_node"]
 
-    B --> C{Tool call needed?}
+    B --> C{"Tool call needed?"}
 
-    C -- Yes --> T[MCP ToolNode]
-    T --> D[collect_data]
-    D --> V{Data valid and sufficient?}
+    C -->|Yes| T["MCP ToolNode"]
+    T --> D["collect_data"]
+    D --> V{"Data valid and sufficient?"}
 
-    V -- No --> E[Return helpful error]
-    E --> END1([END])
+    V -->|No| E["Return helpful error"]
+    E --> END1(["End"])
 
-    V -- Yes --> R[risk_engine]
-    R --> Q{More research or tools needed?}
+    V -->|Yes| R["risk_engine"]
+    R --> Q{"More research or tools needed?"}
 
-    Q -- Yes --> B
-    Q -- No --> P[report_node]
+    Q -->|Yes| B
+    Q -->|No| P["report_node"]
+    Q -.->|Step limit reached| P
 
-    C -- No --> P
+    C -->|No| P
 
-    Q -. Step limit reached .-> P
+    P --> A["approval_node"]
+    A --> H{"Human decision"}
 
-    P --> A[approval_node]
-    A --> H{Human decision}
+    H -->|Approved| S["Persist final assessment"]
+    S --> END2(["End"])
 
-    H -- Approved --> S[Persist final assessment]
-    S --> END2([END])
-
-    H -- Rejected --> F[Capture feedback]
-    F --> RP[Replan assessment]
+    H -->|Rejected| F["Capture feedback"]
+    F --> RP["Replan assessment"]
     RP --> B
+```
+
+If your Markdown viewer does not render Mermaid, the same flow in plain text:
+
+```text
+START -> brain_node
+brain_node -> [tool call needed?]
+    yes -> MCP ToolNode -> collect_data -> [data valid and sufficient?]
+              no  -> return helpful error -> END
+              yes -> risk_engine -> [more research needed?]
+                        yes -> brain_node
+                        no / step limit reached -> report_node
+    no  -> report_node
+report_node -> approval_node -> [human decision]
+    approved -> persist final assessment -> END
+    rejected -> capture feedback -> replan assessment -> brain_node
 ```
 
 ### Workflow Explanation
 
-1. **`brain_node`** — Interprets the user request, risk profile, holding horizon, and assessment objective. It decides which research steps or tool calls are required.
+1. **`brain_node`**: Interprets the user request, risk profile, holding horizon, and assessment objective. It decides which research steps or tool calls are required.
 
-2. **MCP ToolNode** — Invokes the available MCP tools to resolve tickers and retrieve market prices, fundamentals, and news.
+2. **MCP ToolNode**: Invokes the available MCP tools to resolve tickers and retrieve market prices, fundamentals, and news.
 
-3. **`collect_data`** — Collects and organizes tool outputs for downstream analysis.
+3. **`collect_data`**: Collects and organizes tool outputs for downstream analysis.
 
-4. **Validation and guardrails** — Check whether the required inputs and market data are usable. Invalid or insufficient data should produce a clear error rather than a misleading assessment.
+4. **Validation and guardrails**: Check whether the required inputs and market data are usable. Invalid or insufficient data should produce a clear error rather than a misleading assessment.
 
-5. **`risk_engine`** — Calculates quantitative risk and return metrics and applies deterministic assessment rules.
+5. **`risk_engine`**: Calculates quantitative risk and return metrics and applies deterministic assessment rules.
 
-6. **Conditional routing** — Determines whether additional research is needed or whether the assessment can proceed to report generation. Tool loops should remain bounded.
+6. **Conditional routing**: Determines whether additional research is needed or whether the assessment can proceed to report generation. Tool loops remain bounded.
 
-7. **`report_node`** — Combines quantitative results and research findings into Markdown and JSON reports.
+7. **`report_node`**: Combines quantitative results and research findings into Markdown and JSON reports.
 
-8. **`approval_node`** — Pauses the workflow for human review and an approval or rejection decision.
+8. **`approval_node`**: Pauses the workflow for human review and an approval or rejection decision.
 
-9. **Persistence and completion** — Saves the final assessment and returns the result. A rejected assessment can feed back into another planning pass, according to the implemented graph logic.
+9. **Persistence and completion**: Saves the final assessment and returns the result. A rejected assessment can feed back into another planning pass, according to the implemented graph logic.
 
 > The Mermaid diagram is a high-level representation. Keep its node names and conditional edges synchronized with the actual graph implementation in `chat/workflow.py`.
 
 ---
 
-## Shared State — AssessmentState
+## Shared State: AssessmentState
 
 LangGraph nodes exchange information through a shared state object. The state holds the original request, research evidence, quantitative analysis, report artifacts, and approval information.
-
-The following fields are documented for this project:
 
 | Field | Purpose |
 |---|---|
@@ -198,55 +210,54 @@ Persisted Assessment + Final Response
 ## Architecture
 
 ```text
-                    User / Frontend / CLI
-                             |
-                             v
-                       FastAPI (api.py)
-                             |
-                             v
-                     LangGraph Workflow
-                         (chat/)
-                             |
-                 +-----------+-----------+
-                 |                       |
-                 v                       v
-          LLM Planning Agent         MCP Server
-                 |                       |
-                 |                 +-----+------+
-                 |                 |     |      |
-                 |                 v     v      v
-                 |              Ticker Prices Fundamentals
-                 |                       |
-                 |                    News Search
-                 |                       |
-                 +-----------+-----------+
-                             |
-                             v
-                       Data Collection
-                             |
-                             v
-                   Deterministic Analysis
-                     (analysis/)
-                             |
-                             v
-                    Report Generation
-                       (report/)
-                             |
-                             v
-                      Human Approval
-                             |
-                  +----------+----------+
-                  |                     |
-               Approved              Rejected
-                  |                     |
-                  v                     v
-              Persistence           Replanning
-                  |
-                  v
-           Final Assessment
-                  |
-                  v
-          Report Follow-up Q&A
+              User / Frontend / CLI
+                       |
+                       v
+                FastAPI (api.py)
+                       |
+                       v
+               LangGraph Workflow
+                    (chat/)
+                       |
+          +------------+------------+
+          |                         |
+          v                         v
+   LLM Planning Agent          MCP Server
+          |                         |
+          |        +----------+-----+------+---------------+
+          |        |          |            |               |
+          |        v          v            v               v
+          |     Ticker     Prices     Fundamentals       News
+          |     Search                                    Search
+          |        |          |            |               |
+          +--------+----------+------------+---------------+
+                       |
+                       v
+                Data Collection
+                       |
+                       v
+             Deterministic Analysis
+                  (analysis/)
+                       |
+                       v
+              Report Generation
+                  (report/)
+                       |
+                       v
+                Human Approval
+                       |
+            +----------+----------+
+            |                     |
+        Approved               Rejected
+            |                     |
+            v                     v
+       Persistence            Replanning
+            |
+            v
+     Final Assessment
+            |
+            v
+   Report Follow-up Q&A
 ```
 
 ### Main Components
@@ -322,9 +333,7 @@ Copy-Item .env.example .env
 cp .env.example .env
 ```
 
-Update `.env` with your credentials and service configuration.
-
-Do not commit `.env` or expose API keys in source control.
+Update `.env` with your credentials and service configuration. Do not commit `.env` or expose API keys in source control.
 
 ### Initialize PostgreSQL
 
@@ -356,9 +365,7 @@ The following variables are used by the project configuration. Confirm their def
 | `ALLOW_MEMORY_FALLBACK` | Allows an in-memory checkpointer if configured and PostgreSQL is unavailable |
 | `LANGSMITH_*` | Optional tracing configuration |
 
-For a local MCP server, configure the MCP URL to match its actual host, port, and transport endpoint. For a deployed server, use the deployed endpoint.
-
-For PostgreSQL providers that require SSL, configure the connection URL with the appropriate SSL settings.
+For a local MCP server, configure the MCP URL to match its actual host, port, and transport endpoint. For a deployed server, use the deployed endpoint. For PostgreSQL providers that require SSL, configure the connection URL with the appropriate SSL settings.
 
 ---
 
@@ -442,25 +449,15 @@ http://127.0.0.1:8000
 }
 ```
 
-Supported risk profiles:
+Supported risk profiles: `aggressive`, `balanced`, `conservative`.
 
-- `aggressive`
-- `balanced`
-- `conservative`
-
-Supported investment horizons:
-
-- `short`
-- `medium`
-- `long`
+Supported investment horizons: `short`, `medium`, `long`.
 
 An assessment request can cover up to four tickers, according to the documented API constraints.
 
 ### Human Approval
 
-The decision endpoint accepts an approval or rejection decision, optionally with a comment.
-
-The exact request schema should match the Pydantic model used by the current API implementation.
+The decision endpoint accepts an approval or rejection decision, optionally with a comment. The exact request schema should match the Pydantic model used by the current API implementation.
 
 ### Follow-up Questions
 
@@ -483,7 +480,7 @@ The active market and research tools documented for the project are:
 
 The agent uses the available MCP tools to gather evidence for the assessment. The exact tool names must match the MCP server's registered tool definitions.
 
-**Backtesting is not listed as an active MCP capability in this README.**
+Backtesting is not listed as an active MCP capability in this README.
 
 Indian listings commonly use exchange suffixes, such as `RELIANCE.NS` and `TCS.BO`. US tickers are typically unsuffixed, such as `AAPL`.
 
@@ -527,17 +524,17 @@ StockMarket/
 
 ### Important Modules
 
-- `api.py` — FastAPI application and HTTP endpoints.
-- `chat/chat.py` — Agent runtime and CLI interaction.
-- `chat/workflow.py` — LangGraph graph definition and routing.
-- `chat/assessment_logic.py` — Assessment rules and workflow guardrails.
-- `chat/llm_utils.py` — LLM provider utilities.
-- `chat/config.py` — Runtime configuration, timeouts, and tool names.
-- `mcp-server/server.py` — MCP server and tool definitions.
-- `analysis/` — Deterministic risk and return calculations.
-- `database/` — PostgreSQL connection, models, repository, and initialization.
-- `report/` — Markdown and JSON report generation.
-- `reports/` — Generated report artifacts.
+- `api.py`: FastAPI application and HTTP endpoints.
+- `chat/chat.py`: Agent runtime and CLI interaction.
+- `chat/workflow.py`: LangGraph graph definition and routing.
+- `chat/assessment_logic.py`: Assessment rules and workflow guardrails.
+- `chat/llm_utils.py`: LLM provider utilities.
+- `chat/config.py`: Runtime configuration, timeouts, and tool names.
+- `mcp-server/server.py`: MCP server and tool definitions.
+- `analysis/`: Deterministic risk and return calculations.
+- `database/`: PostgreSQL connection, models, repository, and initialization.
+- `report/`: Markdown and JSON report generation.
+- `reports/`: Generated report artifacts.
 
 Refer to `REFACTORING.md` if present for more details on the module boundaries.
 
