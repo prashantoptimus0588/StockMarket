@@ -18,6 +18,7 @@ After approval, you can ask follow-up questions about the saved assessment.
 
 ## Table of Contents
 
+- [Key Highlights](#key-highlights)
 - [Features](#features)
 - [LangGraph Workflow](#langgraph-workflow)
 - [Shared State: AssessmentState](#shared-state-assessmentstate)
@@ -34,6 +35,15 @@ After approval, you can ask follow-up questions about the saved assessment.
 - [Reports and Persistence](#reports-and-persistence)
 - [Limitations](#limitations)
 - [Author](#author)
+
+---
+
+## Key Highlights
+
+- **Agentic workflow:** Built with **LangGraph**, **FastAPI**, and **PostgreSQL**, with a bounded research loop, tool-call guardrails, and resumable checkpointed workflows.
+- **Fast async MCP tooling:** A custom **MCP server** exposes **5 tools** for market data, fundamentals, and news. The agent calls them **asynchronously**, cutting data-gathering latency from **7.4s to ~2.1s (~72%)** across multi-stock assessments.
+- **Deterministic risk engine:** A pure **Python risk engine** with **11 weighted rules** across **9 profile/horizon combinations** (3 risk profiles × 3 horizons) produces the BUY / WATCH / AVOID signals. This prevents LLM **hallucination** and **non-determinism** in the numbers, and the LLM only explains the results. The engine is covered by **17 pytest tests**.
+- **Human in the loop:** Approval step with feedback-driven replanning, Markdown and JSON report generation, and a **Gemini**-backed follow-up Q&A over saved assessments.
 
 ---
 
@@ -547,6 +557,26 @@ Run the project tests using pytest:
 
 ```bash
 uv run pytest
+```
+
+To run only the risk engine tests (17 tests covering 11 weighted rules across all 9 profile/horizon combinations):
+
+**Linux/macOS:**
+
+```bash
+uv run pytest analysis/test_risk_engine.py -v
+```
+
+**Windows PowerShell:**
+
+```powershell
+uv run pytest .\analysis\test_risk_engine.py -v
+```
+
+To also measure coverage (requires `pytest-cov`):
+
+```bash
+uv run pytest analysis/test_risk_engine.py --cov=analysis
 ```
 
 To run selected analysis and repository tests:
